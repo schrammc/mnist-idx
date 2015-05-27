@@ -16,10 +16,12 @@ version:             0.1.0.0
 synopsis:            Read and write data in the IDX format used in e.g. the MINST database.
 
 -- A longer description of the package.
--- description:         
+description:         This package provides functionality to read and write data in the IDX
+                     binary format. This format is relevant for machine learning applications,
+                     like the MINST handwritten digit database.
 
 -- URL for the project homepage or repository.
-homepage:            https://github.com/kryoxide/minst-idx
+homepage:            https://github.com/kryoxide/minst-idx/
 
 -- The license under which the package is released.
 license:             GPL-3
@@ -48,13 +50,16 @@ build-type:          Simple
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >= 1.10
 
+source-repository head
+  type:              git
+  location:          https://github.com/kryoxide/minst-idx/
 
 library
   -- Modules exported by the library.
   exposed-modules: Data.IDX 
   
   -- Modules included in this library but not exported.
-  -- other-modules:       
+  -- other-modules:
   
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:    
