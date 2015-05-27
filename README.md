@@ -1,4 +1,4 @@
-# minst-idx
+# minst-idx ![Build Status](https://travis-ci.org/kryoxide/minst-idx.svg?branch=master)]
 
 This is a simple haskell library that allows you to read
 and write the binary IDX format that is used in the
