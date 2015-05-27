@@ -17,6 +17,7 @@
 module Data.IDX (
                 -- * Data types
                   IDXData
+                , IDXLabels
                 , IDXContentType(..)
 
                 -- * Accessing data
@@ -29,13 +30,24 @@ module Data.IDX (
                 , idxDoubleContent
                 , idxIntContent
 
-                -- * IO / Serialization
+                -- * Labeled data
+                , labeledIntData
+                , labeledDoubleData
 
-                -- ** ByteString serialization
+                -- * IO / Serialization
+                -- ** IDXLabels
+
+                , encodeIDXLabels
+                , decodeIDXLabels
+
+                , encodeIDXLabelsFile
+                , decodeIDXLabelsFile
+                -- ** IDXData (e.g. images)
+                -- *** ByteString serialization
                 , encodeIDX
                 , decodeIDX
 
-                -- ** File IO
+                -- *** File IO
                 , encodeIDXFile
                 , decodeIDXFile
                 )where
@@ -87,6 +99,52 @@ instance Binary IDXContentType where
 data IDXData = IDXInts    IDXContentType (V.Vector Int) (V.Vector Int   )
              | IDXDoubles IDXContentType (V.Vector Int) (V.Vector Double)
              deriving Show
+
+newtype IDXLabels = IDXLabels (V.Vector Int)
+
+instance Binary IDXLabels where
+  get = do
+    getInt32
+    nItems <- fromIntegral <$> getInt32
+    let readEntries n = V.replicateM n $ fromIntegral <$> getWord8 >>= (return $!)
+    v <- readContent readEntries 500 nItems
+    return $ IDXLabels v
+
+  put (IDXLabels v) = do
+    put (0 :: Int32)
+    let len = V.length v
+    put (fromIntegral len :: Int32)
+    V.forM_ v (\x -> put $! (fromIntegral x :: Word8))
+
+-- | Partition a dataset and label each subpartition, return int values
+labeledIntData:: IDXLabels -> IDXData -> Maybe [(Int, V.Vector Int)]
+labeledIntData (IDXLabels v) dat =
+  if (V.length v) == dim0
+  then Just $ do
+    i <- [0 .. dim0 - 1]
+    let lab = v ! i
+    return $ (lab,V.slice (i*entrySize) entrySize content)
+  else Nothing
+  where
+    dim0 = (idxDimensions dat) ! 0
+    content = idxIntContent dat
+    entrySize = (V.product $ idxDimensions dat) `div` dim0
+
+-- | Partition a dataset and label each subpartition, return double values
+labeledDoubleData:: IDXLabels -> IDXData -> Maybe [(Int, V.Vector Double)]
+labeledDoubleData (IDXLabels v) dat =
+  if (V.length v) == dim0
+  then Just $ do
+    i <- [0 .. dim0 - 1]
+    let lab = v ! i
+    return $ (lab,V.slice (i*entrySize) entrySize content)
+  else Nothing
+  where
+    dim0 = (idxDimensions dat) ! 0
+    content = idxDoubleContent dat
+    entrySize = (V.product $ idxDimensions dat) `div` dim0
+
+
 
 -- | Return the what type the data is stored in
 idxType :: IDXData -> IDXContentType
@@ -241,6 +299,20 @@ getFloat = get
 
 getDouble :: Get Double
 getDouble = get
+
+decodeIDXLabelsFile :: FilePath -> IO (Maybe IDXLabels)
+decodeIDXLabelsFile path = BL.readFile path >>= return . decodeIDXLabels
+
+decodeIDXLabels :: BL.ByteString -> Maybe IDXLabels
+decodeIDXLabels content = case decodeOrFail content of
+                           Right (_,_,result) -> Just result
+                           Left _             -> Nothing
+
+encodeIDXLabelsFile :: IDXLabels -> FilePath -> IO ()
+encodeIDXLabelsFile labs path = encodeFile path labs
+
+encodeIDXLabels :: IDXLabels -> BL.ByteString
+encodeIDXLabels = encode
 
 decodeIDXFile :: FilePath -> IO (Maybe IDXData)
 decodeIDXFile path = BL.readFile path >>= return . decodeIDX
