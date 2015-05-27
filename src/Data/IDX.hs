@@ -111,14 +111,16 @@ isIDXReal (IDXDoubles _ _ _) = True
 isIDXReal (_               ) = False
 
 -- | Return contained ints, if no ints are contained,
--- convert content to ints by using 'round'
+-- convert content to ints by using 'round'. Data is stored like
+-- in a C-array, i.e. the last index changes first.
 idxIntContent :: IDXData -> V.Vector Int
 idxIntContent (IDXInts    _ _ v) = v
 idxIntContent (IDXDoubles _ _ v) =
   V.fromList $ [round $ (v ! i) | i <- [0.. V.length v]]
 
 -- | Return contained doubles, if no doubles are contained
--- convert the content to double by using 'fromIntegral'
+-- convert the content to double by using 'fromIntegral'. Data is stored like
+-- in a C-array, i.e. the last index changes first.
 idxDoubleContent :: IDXData -> V.Vector Double
 idxDoubleContent (IDXDoubles _ _ v) = v
 idxDoubleContent (IDXInts    _ _ v) =
