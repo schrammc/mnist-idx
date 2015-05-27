@@ -1,5 +1,3 @@
-{-# LANGUAGE GADTs #-}
-
 --------------------------------------------------------------------------------
 -- |
 -- Module    : Data.IDX
@@ -59,9 +57,11 @@ module Data.IDX (
                 )where
 
 import           Control.Monad
+
 import           Data.Binary
 import           Data.ByteString.Lazy (ByteString)
 import qualified Data.ByteString.Lazy as BL
+import           Data.IDX.Internal
 import           Data.Int
 import           Data.Traversable
 import qualified Data.Vector.Unboxed as V
@@ -69,16 +69,6 @@ import           Data.Vector.Unboxed ((!))
 import           Data.Word
 
 import Debug.Trace
-
--- | A type to describe the content, according to IDX spec
-data IDXContentType where
-   IDXUnsignedByte :: IDXContentType
-   IDXSignedByte   :: IDXContentType
-   IDXShort        :: IDXContentType
-   IDXInt          :: IDXContentType
-   IDXFloat        :: IDXContentType
-   IDXDouble       :: IDXContentType
-   deriving Show
 
 instance Binary IDXContentType where
     get = do
@@ -98,15 +88,6 @@ instance Binary IDXContentType where
     put IDXInt          = putWord8 0x0C
     put IDXFloat        = putWord8 0x0D
     put IDXDouble       = putWord8 0x0E
-
--- | Datatype for storing IDXData. Internally data is always stored either
--- as 'Int' or 'Double' unboxed vectors. However when binary serialization
--- is used, the data is serialized according to the 'IDXContentType'.
-data IDXData = IDXInts    IDXContentType (V.Vector Int) (V.Vector Int   )
-             | IDXDoubles IDXContentType (V.Vector Int) (V.Vector Double)
-             deriving Show
-
-newtype IDXLabels = IDXLabels (V.Vector Int)
 
 instance Binary IDXLabels where
   get = do
@@ -149,46 +130,6 @@ labeledDoubleData (IDXLabels v) dat =
     dim0 = (idxDimensions dat) ! 0
     content = idxDoubleContent dat
     entrySize = (V.product $ idxDimensions dat) `div` dim0
-
-
-
--- | Return the what type the data is stored in
-idxType :: IDXData -> IDXContentType
-idxType (IDXInts    t _ _) = t
-idxType (IDXDoubles t _ _) = t
-
--- | Return an unboxed Vector of Int dimensions
-idxDimensions :: IDXData -> V.Vector Int
-idxDimensions (IDXInts    _ ds _) = ds
-idxDimensions (IDXDoubles _ ds _) = ds
-
--- | Return wether the data in this IDXData value is
--- stored as integral values
-isIDXIntegral :: IDXData -> Bool
-isIDXIntegral (IDXInts _ _ _) = True
-isIDXIntegral (_            ) = False
-
--- | Return wether the data in this IDXData value is
--- stored as double values
-isIDXReal :: IDXData -> Bool
-isIDXReal (IDXDoubles _ _ _) = True
-isIDXReal (_               ) = False
-
--- | Return contained ints, if no ints are contained,
--- convert content to ints by using 'round'. Data is stored like
--- in a C-array, i.e. the last index changes first.
-idxIntContent :: IDXData -> V.Vector Int
-idxIntContent (IDXInts    _ _ v) = v
-idxIntContent (IDXDoubles _ _ v) =
-  V.fromList $ [round $ (v ! i) | i <- [0.. V.length v]]
-
--- | Return contained doubles, if no doubles are contained
--- convert the content to double by using 'fromIntegral'. Data is stored like
--- in a C-array, i.e. the last index changes first.
-idxDoubleContent :: IDXData -> V.Vector Double
-idxDoubleContent (IDXDoubles _ _ v) = v
-idxDoubleContent (IDXInts    _ _ v) =
-  V.fromList $ [fromIntegral $ (v ! i) | i <- [0.. V.length v]]
 
 instance Binary IDXData where
     get = do
@@ -260,22 +201,6 @@ buildDoubleResult nEntries typ dimV getContent = do
   return $ IDXDoubles typ dimV content
   where
     readEntries n = V.replicateM n $ realToFrac <$> getContent >>= (return $!)
-
-readContent :: (V.Unbox a)
-            => (Int -> Get (V.Vector a)) -- ^ To Get a chunk of size n
-            -> Int                       -- ^ Chunk size
-            -> Int                       -- ^ Expected input
-            -> Get (V.Vector a) 
-readContent readEntries chunkSize n =
-  if n > chunkSize
-  then do
-    headChunk <- readEntries (n `mod` chunkSize)
-    let nChunks = n `div` chunkSize
-    chunkList <- replicateM nChunks (readContent readEntries chunkSize chunkSize)
-    return $! V.concat $ headChunk:chunkList
-  else do
-    rest <- readEntries n
-    return $! rest
 
 -- | Put values that are saved as Int
 putIntegral :: IDXContentType -> Int -> Put

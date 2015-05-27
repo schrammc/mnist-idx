@@ -13,7 +13,7 @@ name:                minst-idx
 version:             0.1.1.0
 
 -- A short (one-line) description of the package.
-synopsis:            Read and write data in the IDX format used in e.g. the MINST database.
+synopsis:            Read and write IDX data that is used in e.g. the MINST database.
 
 -- A longer description of the package.
 description:         This package provides functionality to read and write data in the IDX
@@ -56,7 +56,8 @@ source-repository head
 
 library
   -- Modules exported by the library.
-  exposed-modules: Data.IDX 
+  exposed-modules: Data.IDX
+                   Data.IDX.Internal
   
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -74,4 +75,18 @@ library
   
   -- Base language which the package is written in.
   default-language:    Haskell2010
-  
+
+test-suite tests
+
+  type:                exitcode-stdio-1.0
+
+  hs-source-dirs:      test
+
+  main-is:             Main.hs
+
+  build-depends:       base >= 4.8
+                     , hspec >= 2.1
+                     , vector >= 0.10 && < 0.11
+                     , binary >= 0.7 && < 0.8
+                     , directory >= 1.2 && < 1.3
+                     , minst-idx
