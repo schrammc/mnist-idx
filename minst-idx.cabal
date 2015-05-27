@@ -48,7 +48,7 @@ build-type:          Simple
 -- extra-source-files:  
 
 -- Constraint on the version of Cabal needed to build this package.
-cabal-version:       >= 1.10
+cabal-version:       >= 1.22
 
 source-repository head
   type:              git
