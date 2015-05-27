@@ -1,3 +1,6 @@
 language: haskell
 
 ghc: 7.10
+
+env:
+  - CABALVER=1.22
