@@ -27,6 +27,7 @@ module Data.IDX (
                 , isIDXReal
                 , isIDXIntegral
 
+                -- * Raw data
                 , idxDoubleContent
                 , idxIntContent
 
@@ -35,14 +36,19 @@ module Data.IDX (
                 , labeledDoubleData
 
                 -- * IO / Serialization
-                -- ** IDXLabels
 
+                -- ** IDXLabels
+                  
+                -- *** ByteString serialization
                 , encodeIDXLabels
                 , decodeIDXLabels
 
+                -- *** FileIO
                 , encodeIDXLabelsFile
                 , decodeIDXLabelsFile
+                  
                 -- ** IDXData (e.g. images)
+                  
                 -- *** ByteString serialization
                 , encodeIDX
                 , decodeIDX
