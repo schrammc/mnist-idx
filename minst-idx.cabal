@@ -48,7 +48,7 @@ build-type:          Simple
 -- extra-source-files:  
 
 -- Constraint on the version of Cabal needed to build this package.
-cabal-version:       >= 1.22
+cabal-version:       >= 1.16
 
 source-repository head
   type:              git
@@ -66,7 +66,7 @@ library
   -- other-extensions:    
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.8 && <4.9,
+  build-depends:       base >=4.6 && <4.9,
                        binary >= 0.7 && < 0.8,
                        vector >= 0.10 && < 0.11,
                        bytestring >= 0.10 && < 0.11 
@@ -84,8 +84,8 @@ test-suite tests
 
   main-is:             Main.hs
 
-  build-depends:       base >= 4.8
-                     , hspec >= 2.1
+  build-depends:       base >= 4.6
+                     , hspec >= 1.9
                      , vector >= 0.10 && < 0.11
                      , binary >= 0.7 && < 0.8
                      , directory >= 1.2 && < 1.3

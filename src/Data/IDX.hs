@@ -56,6 +56,8 @@ module Data.IDX (
                 , decodeIDXFile
                 )where
 
+-- For compatibility with versions of base < 4.8
+import           Control.Applicative ((<$>))
 import           Control.Monad
 
 import           Data.Binary
