@@ -72,7 +72,7 @@ isIDXReal (_               ) = False
 idxIntContent :: IDXData -> V.Vector Int
 idxIntContent (IDXInts    _ _ v) = v
 idxIntContent (IDXDoubles _ _ v) =
-  V.fromList $ [round $ (v ! i) | i <- [0.. V.length v]]
+  V.fromList $ [round $ (v ! i) | i <- [0.. ((V.length v)-1)]]
 
 -- | Return contained doubles, if no doubles are contained
 -- convert the content to double by using 'fromIntegral'. Data is stored like
@@ -80,7 +80,7 @@ idxIntContent (IDXDoubles _ _ v) =
 idxDoubleContent :: IDXData -> V.Vector Double
 idxDoubleContent (IDXDoubles _ _ v) = v
 idxDoubleContent (IDXInts    _ _ v) =
-  V.fromList $ [fromIntegral $ (v ! i) | i <- [0.. V.length v]]
+  V.fromList $ [fromIntegral $ (v ! i) | i <- [0.. ((V.length v) - 1)]]
 
 -- | Helper function to read a (possibly big) vector of binary
 -- values as chunks. Strictly evaluates each chunk and then

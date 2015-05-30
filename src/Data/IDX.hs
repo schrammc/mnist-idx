@@ -233,6 +233,7 @@ getFloat = get
 getDouble :: Get Double
 getDouble = get
 
+-- | Read labels from a file, return 'Nothing' if something doesn't work
 decodeIDXLabelsFile :: FilePath -> IO (Maybe IDXLabels)
 decodeIDXLabelsFile path = BL.readFile path >>= return . decodeIDXLabels
 
@@ -241,6 +242,7 @@ decodeIDXLabels content = case decodeOrFail content of
                            Right (_,_,result) -> Just result
                            Left _             -> Nothing
 
+-- | Read data from a file, return 'Nothing' if something doesn't work
 encodeIDXLabelsFile :: IDXLabels -> FilePath -> IO ()
 encodeIDXLabelsFile labs path = encodeFile path labs
 
