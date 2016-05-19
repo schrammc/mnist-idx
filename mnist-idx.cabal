@@ -58,7 +58,7 @@ library
   -- Other library packages from which modules are imported.
   build-depends:       base >=4.6 && <4.9,
                        binary >= 0.7 && < 0.8,
-                       vector >= 0.10 && < 0.11,
+                       vector >= 0.10 && < 0.12,
                        bytestring >= 0.10 && < 0.11 
   -- Directories containing source files.
   hs-source-dirs:      src
@@ -76,7 +76,7 @@ test-suite tests
 
   build-depends:       base >= 4.6
                      , hspec >= 1.9
-                     , vector >= 0.10 && < 0.11
+                     , vector >= 0.10 && < 0.12
                      , binary >= 0.7 && < 0.8
                      , directory >= 1.2 && < 1.3
                      , mnist-idx
