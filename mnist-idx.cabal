@@ -56,8 +56,8 @@ library
   -- other-extensions:    
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.6 && <4.9,
-                       binary >= 0.7 && < 0.8,
+  build-depends:       base >=4.6 && <5,
+                       binary >= 0.7 && < 0.9,
                        vector >= 0.10 && < 0.12,
                        bytestring >= 0.10 && < 0.11 
   -- Directories containing source files.
@@ -77,6 +77,6 @@ test-suite tests
   build-depends:       base >= 4.6
                      , hspec >= 1.9
                      , vector >= 0.10 && < 0.12
-                     , binary >= 0.7 && < 0.8
+                     , binary >= 0.7 && < 0.9
                      , directory >= 1.2 && < 1.3
                      , mnist-idx
