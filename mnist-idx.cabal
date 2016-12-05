@@ -1,6 +1,6 @@
 name:                mnist-idx
 
-version:             0.1.2.5
+version:             0.1.2.6
 
 -- A short (one-line) description of the package.
 synopsis:            Read and write IDX data that is used in e.g. the MNIST database.
