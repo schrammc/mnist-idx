@@ -23,6 +23,7 @@ import           Data.Int
 
 import qualified Data.Vector.Unboxed as V
 import           Data.Vector.Unboxed ((!))
+import           Data.Functor ((<$>))
 
 -- | A type to describe the content, according to IDX spec
 data IDXContentType where
