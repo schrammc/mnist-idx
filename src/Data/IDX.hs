@@ -25,15 +25,15 @@ module Data.IDX (
                 , isIDXReal
                 , isIDXIntegral
 
-                -- * Raw data
+                -- ** Raw data
                 , idxDoubleContent
                 , idxIntContent
 
-                -- * Partitioned data
+                -- ** Partitioned data
                 , partitionedDoubleData
                 , partitionedIntData
 
-                -- * Labeled data
+                -- ** Labeled data
                 , labeledIntData
                 , labeledDoubleData
 
