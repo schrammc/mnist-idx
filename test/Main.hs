@@ -10,13 +10,16 @@ import qualified Data.Vector.Unboxed as V
 import System.Directory
 import System.IO
 
+dataList :: [Int]
 dataList = [1,2,3,4]
 
+testData :: IDXData
 testData = IDXInts IDXUnsignedByte dims values
   where
     dims = V.fromList [2,2]
     values = V.fromList dataList
 
+testLabels :: IDXLabels
 testLabels = IDXLabels $ V.fromList [0,1]
 
 spec :: Spec

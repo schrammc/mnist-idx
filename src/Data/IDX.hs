@@ -71,33 +71,34 @@ import           Data.Vector.Unboxed ((!))
 import           Data.Word
 
 -- | Partition a dataset and label each subpartition, return int values
-labeledIntData:: IDXLabels -> IDXData -> Maybe [(Int, V.Vector Int)]
+labeledIntData :: IDXLabels -> IDXData -> Maybe [(Int, V.Vector Int)]
 labeledIntData (IDXLabels v) dat =
-  if (V.length v) == dim0
-  then Just $ do
-    i <- [0 .. dim0 - 1]
-    let lab = v ! i
-    return $ (lab,V.slice (i*entrySize) entrySize content)
+  if V.length v == length partitionedData
+  then Just $ zip (V.toList v) partitionedData
   else Nothing
   where
-    dim0 = (idxDimensions dat) ! 0
-    content = idxIntContent dat
-    entrySize = (V.product $ idxDimensions dat) `div` dim0
+    partitionedData = partitionedIntData dat
 
 -- | Partition a dataset and label each subpartition, return double values
-labeledDoubleData:: IDXLabels -> IDXData -> Maybe [(Int, V.Vector Double)]
+labeledDoubleData :: IDXLabels -> IDXData -> Maybe [(Int, V.Vector Double)]
 labeledDoubleData (IDXLabels v) dat =
-  if (V.length v) == dim0
-  then Just $ do
-    i <- [0 .. dim0 - 1]
-    let lab = v ! i
-    return $ (lab,V.slice (i*entrySize) entrySize content)
+  if V.length v == length partitionedData
+  then Just $ zip (V.toList v) partitionedData
   else Nothing
   where
-    dim0 = (idxDimensions dat) ! 0
-    content = idxDoubleContent dat
-    entrySize = (V.product $ idxDimensions dat) `div` dim0
+    partitionedData = partitionedDoubleData dat
 
+-- | Partition a dataset along the first dimension. If the data set contains
+-- images this means splitting the dataset up into a list of images where each
+-- 'Double' represents one pixel.
+partitionedDoubleData :: IDXData -> [V.Vector Double]
+partitionedDoubleData = partitionedData idxDoubleContent
+
+-- | Partition a dataset along the first dimension. If the data set contains
+-- images this means splitting the dataset up into a list of images where each
+-- 'Int' represents one pixel.
+partitionedIntData :: IDXData -> [V.Vector Int]
+partitionedIntData = partitionedData idxIntContent
 
 -- | Read labels from a file, return 'Nothing' if something doesn't work
 decodeIDXLabelsFile :: FilePath -> IO (Maybe IDXLabels)

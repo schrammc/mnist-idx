@@ -236,3 +236,14 @@ putIntegral t               _ = error $ "IDX.putIntegral " ++ show t
 putReal :: IDXContentType -> Double -> Put
 putReal IDXDouble n = put n
 putReal IDXFloat  n = put $! (realToFrac n :: Float )
+
+-- | Split data by the first dimension of the C-Array. This would e.g. split a
+-- data-set of images into a list of data representing an individual image
+partitionedData :: V.Unbox a => (IDXData -> V.Vector a) -> IDXData -> [V.Vector a]
+partitionedData getContent idxData = do
+  i <- [0 .. dim0 - 1]
+  return $ (V.slice (i*entrySize) entrySize content)
+ where
+   dim0 = V.head $ idxDimensions idxData
+   content = getContent idxData
+   entrySize = (V.product $ idxDimensions idxData) `div` dim0
