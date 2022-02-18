@@ -29,6 +29,10 @@ module Data.IDX (
                 , idxDoubleContent
                 , idxIntContent
 
+                -- * Partitioned data
+                , partitionedDoubleData
+                , partitionedIntData
+
                 -- * Labeled data
                 , labeledIntData
                 , labeledDoubleData

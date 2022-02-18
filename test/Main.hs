@@ -49,6 +49,12 @@ spec = do
     it "Binary serialization roundtrips" $
       property $ \(idxData :: IDXData) -> Binary.decode (Binary.encode idxData) == idxData
 
+    it "Partitioning the dataset and concatenating partitions is identical (double)" $
+      property $ \(idxData :: IDXData) -> mconcat (partitionedDoubleData idxData) == idxDoubleContent idxData
+
+    it "Partitioning the dataset and concatenating partitions is identical (int)" $
+      property $ \(idxData :: IDXData) -> mconcat (partitionedIntData idxData) == idxIntContent idxData
+
     it "should be created and deserialized correctly" $ do
 
       -- Get temporary directory
