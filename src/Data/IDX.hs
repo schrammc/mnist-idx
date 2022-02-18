@@ -4,8 +4,8 @@
 -- Copyright : Christof Schramm
 -- License   : GPL v 3
 --
--- Maintainer : Christof Schramm <christof.schramm@campus.lmu.de>
--- Stability : Experimental
+-- Maintainer  : Christof Schramm <blog@christof-schramm.net>
+-- Stability   : Experimental
 -- Portability : Should work in all common Haskell implementations
 --
 -- A package for reading and writing data in the IDX format.
@@ -77,11 +77,11 @@ import           Data.Word
 -- | Partition a dataset and label each subpartition, return int values
 labeledIntData :: IDXLabels -> IDXData -> Maybe [(Int, V.Vector Int)]
 labeledIntData (IDXLabels v) dat =
-  if V.length v == length partitionedData
-  then Just $ zip (V.toList v) partitionedData
+  if V.length v == length partitionedData'
+  then Just $ zip (V.toList v) partitionedData'
   else Nothing
   where
-    partitionedData = partitionedIntData dat
+    partitionedData' = partitionedData idxIntContent dat
 
 -- | Partition a dataset and label each subpartition, return double values
 labeledDoubleData :: IDXLabels -> IDXData -> Maybe [(Int, V.Vector Double)]

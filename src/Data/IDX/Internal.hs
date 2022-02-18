@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE StandaloneDeriving #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module:    Data.IDX.Internal
@@ -17,76 +18,102 @@
 --------------------------------------------------------------------------------
 module Data.IDX.Internal where
 
-import           Control.Monad (replicateM)
+import           Control.Monad (replicateM, void)
 import           Data.Binary
 import           Data.Int
 
 import qualified Data.Vector.Unboxed as V
-import           Data.Vector.Unboxed ((!))
-import           Data.Functor ((<$>))
+
+data SomeIDXContentType where
+  SomeIDXContentType :: IDXContentType a -> SomeIDXContentType
+
+deriving instance Show SomeIDXContentType
+
+instance Eq SomeIDXContentType where
+  (SomeIDXContentType a) == (SomeIDXContentType b) =
+    case (a, b) of
+      (IDXUnsignedByte, IDXUnsignedByte) -> True
+      (IDXSignedByte  , IDXSignedByte  ) -> True
+      (IDXShort       , IDXShort       ) -> True
+      (IDXInt         , IDXInt         ) -> True
+      (IDXFloat       , IDXFloat       ) -> True
+      (IDXDouble      , IDXDouble      ) -> True
+      _ -> False
 
 -- | A type to describe the content, according to IDX spec
-data IDXContentType where
-   IDXUnsignedByte :: IDXContentType
-   IDXSignedByte   :: IDXContentType
-   IDXShort        :: IDXContentType
-   IDXInt          :: IDXContentType
-   IDXFloat        :: IDXContentType
-   IDXDouble       :: IDXContentType
-   deriving (Show, Eq)
+data IDXContentType a where
+   IDXUnsignedByte :: IDXContentType Word8
+   IDXSignedByte   :: IDXContentType Int8
+   IDXShort        :: IDXContentType Int16
+   IDXInt          :: IDXContentType Int32
+   IDXFloat        :: IDXContentType Float
+   IDXDouble       :: IDXContentType Double
 
-instance Binary IDXContentType where
+deriving instance Show (IDXContentType a)
+deriving instance Eq (IDXContentType a)
+
+instance Binary SomeIDXContentType where
     get = do
       w <- getWord8
       case w of
-        0x08 -> return IDXUnsignedByte
-        0x09 -> return IDXSignedByte
-        0x0B -> return IDXShort
-        0x0C -> return IDXInt
-        0x0D -> return IDXFloat
-        0x0E -> return IDXDouble
+        0x08 -> return $ SomeIDXContentType IDXUnsignedByte
+        0x09 -> return $ SomeIDXContentType IDXSignedByte
+        0x0B -> return $ SomeIDXContentType IDXShort
+        0x0C -> return $ SomeIDXContentType IDXInt
+        0x0D -> return $ SomeIDXContentType IDXFloat
+        0x0E -> return $ SomeIDXContentType IDXDouble
         _ -> fail $ "Unrecognized IDX content type: " ++ (show w)
 
-    put IDXUnsignedByte = putWord8 0x08
-    put IDXSignedByte   = putWord8 0x09
-    put IDXShort        = putWord8 0x0B
-    put IDXInt          = putWord8 0x0C
-    put IDXFloat        = putWord8 0x0D
-    put IDXDouble       = putWord8 0x0E
+    put (SomeIDXContentType IDXUnsignedByte) = put (0x08  :: Word8)
+    put (SomeIDXContentType IDXSignedByte  ) = put (0x09  :: Word8)
+    put (SomeIDXContentType IDXShort       ) = put (0x0B  :: Word8)
+    put (SomeIDXContentType IDXInt         ) = put (0x0C  :: Word8)
+    put (SomeIDXContentType IDXFloat       ) = put (0x0D  :: Word8)
+    put (SomeIDXContentType IDXDouble      ) = put (0x0E  :: Word8)
 
 -- | Datatype for storing IDXData. Internally data is always stored either
 -- as 'Int' or 'Double' unboxed vectors. However when binary serialization
 -- is used, the data is serialized according to the 'IDXContentType'.
-data IDXData = IDXInts    IDXContentType (V.Vector Int) (V.Vector Int   )
-             | IDXDoubles IDXContentType (V.Vector Int) (V.Vector Double)
-             deriving (Show, Eq)
+data IDXData where
+  IDXData :: (Binary a, V.Unbox a, Show a) => IDXContentType a -> V.Vector Int -> V.Vector a -> IDXData
 
+deriving instance Show IDXData
+
+instance Eq IDXData  where
+  (IDXData ctypeA dimsA dataA) == (IDXData ctypeB dimsB dataB) =
+    case (ctypeA, ctypeB) of
+      (IDXUnsignedByte, IDXUnsignedByte) -> dimsA == dimsB && dataA == dataB
+      (IDXSignedByte  , IDXSignedByte  ) -> dimsA == dimsB && dataA == dataB
+      (IDXShort       , IDXShort       ) -> dimsA == dimsB && dataA == dataB
+      (IDXInt         , IDXInt         ) -> dimsA == dimsB && dataA == dataB
+      (IDXFloat       , IDXFloat       ) -> dimsA == dimsB && dataA == dataB
+      (IDXDouble      , IDXDouble      ) -> dimsA == dimsB && dataA == dataB
+      _ -> False
 
 instance Binary IDXData where
     get = do
       -- Get header information (4 bytes total)
-      getWord8
-      getWord8 
-      idxType <- get :: Get IDXContentType
+      void getWord8
+      void getWord8 
+      SomeIDXContentType idxTyp <- get
       nDimensions <- fromIntegral <$> getWord8
 
       -- Each dimension size is encoded as a 32 bit integer
-      dimensionSizes <- replicateM nDimensions (fromIntegral <$> getInt32)      
-      let nEntries = fromIntegral $ product dimensionSizes
+      dimensionSizes <- replicateM nDimensions (fromIntegral <$> (get :: Get Int32) :: Get Int)
+      let nEntries = product dimensionSizes
           dimV = V.fromList dimensionSizes
 
       -- Retrieve the data, depending on the type specified in the file
       -- Cast all integral types to Int and all decimal numbers tod double
-      case idxType of
-        t@IDXUnsignedByte -> buildIntResult nEntries t dimV getWord8
-        t@IDXSignedByte   -> buildIntResult nEntries t dimV getInt8
-        t@IDXShort        -> buildIntResult nEntries t dimV getInt16
-        t@IDXInt          -> buildIntResult nEntries t dimV getInt32
-
-        t@IDXFloat        -> buildDoubleResult nEntries t dimV getFloat
-        t@IDXDouble       -> buildDoubleResult nEntries t dimV getDouble
+      case idxTyp of
+        t@IDXUnsignedByte -> buildResult nEntries t dimV get
+        t@IDXSignedByte   -> buildResult nEntries t dimV get
+        t@IDXShort        -> buildResult nEntries t dimV get
+        t@IDXInt          -> buildResult nEntries t dimV get
+        t@IDXFloat        -> buildResult nEntries t dimV get
+        t@IDXDouble       -> buildResult nEntries t dimV get
         
-    put d = do
+    put d@(IDXData _ dimensions content) = do
       -- First four bytes are meta information
       putWord8 0
       putWord8 0
@@ -94,24 +121,21 @@ instance Binary IDXData where
       put $ idxType d
       
       -- Fourth byte is number of dimensions
-      let dimensions = idxDimensions d
       put $ (fromIntegral $ V.length dimensions :: Word8)
 
       -- Put size of each dimension as an Int32
       V.forM_ dimensions $ (\x -> put $! (fromIntegral x :: Int32))
 
       -- Put the individual values
-      case d of
-        IDXDoubles t _ content -> V.forM_ content $ putReal     t
-        IDXInts    t _ content -> V.forM_ content $ putIntegral t
-
+      V.forM_ content put 
+        
 -- | A data type that holds 'Int' labels for a set of 'IDXData'
 newtype IDXLabels = IDXLabels (V.Vector Int)
 
 instance Binary IDXLabels where
   get = do
-    getInt32
-    nItems <- fromIntegral <$> getInt32
+    _ <- get :: Get Int32
+    nItems <- fromIntegral <$> (get :: Get Int32)
     let readEntries n = V.replicateM n $ fromIntegral <$> getWord8 >>= (return $!)
     v <- readContent readEntries 500 nItems
     return $ IDXLabels v
@@ -124,42 +148,51 @@ instance Binary IDXLabels where
 
 
 -- | Return the what type the data is stored in
-idxType :: IDXData -> IDXContentType
-idxType (IDXInts    t _ _) = t
-idxType (IDXDoubles t _ _) = t
+idxType :: IDXData -> SomeIDXContentType
+idxType (IDXData    t _ _) = SomeIDXContentType t
 
 -- | Return an unboxed Vector of Int dimensions
 idxDimensions :: IDXData -> V.Vector Int
-idxDimensions (IDXInts    _ ds _) = ds
-idxDimensions (IDXDoubles _ ds _) = ds
+idxDimensions (IDXData _ ds _) = ds
 
 -- | Return wether the data in this IDXData value is
 -- stored as integral values
 isIDXIntegral :: IDXData -> Bool
-isIDXIntegral (IDXInts _ _ _) = True
-isIDXIntegral (_            ) = False
+isIDXIntegral (IDXData IDXUnsignedByte _ _) = True
+isIDXIntegral (IDXData IDXSignedByte   _ _) = True
+isIDXIntegral (IDXData IDXShort        _ _) = True
+isIDXIntegral (IDXData IDXInt          _ _) = True
+isIDXIntegral (IDXData IDXFloat        _ _) = False
+isIDXIntegral (IDXData IDXDouble       _ _) = False
 
 -- | Return wether the data in this IDXData value is
 -- stored as double values
 isIDXReal :: IDXData -> Bool
-isIDXReal (IDXDoubles _ _ _) = True
-isIDXReal (_               ) = False
+isIDXReal = not . isIDXIntegral
 
 -- | Return contained ints, if no ints are contained,
 -- convert content to ints by using 'round'. Data is stored like
 -- in a C-array, i.e. the last index changes first.
 idxIntContent :: IDXData -> V.Vector Int
-idxIntContent (IDXInts    _ _ v) = v
-idxIntContent (IDXDoubles _ _ v) =
-  V.fromList $ [round $ (v ! i) | i <- [0.. ((V.length v)-1)]]
+idxIntContent (IDXData IDXUnsignedByte _ v) = V.map fromIntegral v
+idxIntContent (IDXData IDXSignedByte   _ v) = V.map fromIntegral v
+idxIntContent (IDXData IDXShort        _ v) = V.map fromIntegral v
+idxIntContent (IDXData IDXInt          _ v) = V.map fromIntegral v
+idxIntContent (IDXData IDXDouble       _ v) = V.map round v
+idxIntContent (IDXData IDXFloat        _ v) = V.map round v
 
 -- | Return contained doubles, if no doubles are contained
 -- convert the content to double by using 'fromIntegral'. Data is stored like
 -- in a C-array, i.e. the last index changes first.
 idxDoubleContent :: IDXData -> V.Vector Double
-idxDoubleContent (IDXDoubles _ _ v) = v
-idxDoubleContent (IDXInts    _ _ v) =
-  V.fromList $ [fromIntegral $ (v ! i) | i <- [0.. ((V.length v) - 1)]]
+idxDoubleContent (IDXData t _ v) =
+  case t of
+    IDXUnsignedByte -> V.map fromIntegral v
+    IDXSignedByte   -> V.map fromIntegral v
+    IDXShort        -> V.map fromIntegral v
+    IDXInt          -> V.map fromIntegral v
+    IDXDouble       -> v
+    IDXFloat        -> V.map realToFrac v
 
 -- | Helper function to read a (possibly big) vector of binary
 -- values as chunks. Strictly evaluates each chunk and then
@@ -180,62 +213,19 @@ readContent readEntries chunkSize n =
     rest <- readEntries n
     return $! rest
 
--- Haskell's Data.Binary uses big-endian format
-getInt8 :: Get Int8
-getInt8 = get
-
-getInt16 :: Get Int16
-getInt16 = get
-
-getInt32 :: Get Int32
-getInt32 = get
-
-getFloat :: Get Float
-getFloat = get
-
-getDouble :: Get Double
-getDouble = get
-
 -- | Helper function for parsing integer data from the
 -- IDX content. Returns a full IDX result.
-buildIntResult :: Integral a
-                  => Int                -- ^ Expected number of entries
-                      -> IDXContentType -- ^ Description of content
-                      -> V.Vector Int   -- ^ Dimension sizes
-                      -> Get a          -- ^ Monadic action to get content element
-                      -> Get IDXData
-buildIntResult nEntries typ dimV getContent = do
+buildResult :: (Binary a, V.Unbox a, Show a)
+            => Int              -- ^ Expected number of entries
+            -> IDXContentType a -- ^ Description of content
+            -> V.Vector Int     -- ^ Dimension sizes
+            -> Get a            -- ^ Monadic action to get content element
+            -> Get IDXData
+buildResult nEntries typ dimV getContent = do
   content <- readContent readEntries 500 nEntries
-  return $ IDXInts typ dimV content
+  return $ IDXData typ dimV content
   where
-    readEntries n = V.replicateM n $ fromIntegral <$> getContent >>= (return $!)
-
--- | Helper function for parsing real number data from
--- the IDX content.
-buildDoubleResult :: Real a
-                  => Int                -- ^ Expected number of entries
-                      -> IDXContentType -- ^ Description of content
-                      -> V.Vector Int   -- ^ Dimension sizes
-                      -> Get a          -- ^ Monadic action to get content element
-                      -> Get IDXData
-buildDoubleResult nEntries typ dimV getContent = do
-  content <- readContent readEntries 500 nEntries
-  return $ IDXDoubles typ dimV content
-  where
-    readEntries n = V.replicateM n $ realToFrac <$> getContent >>= (return $!)
-
--- | Put values that are saved as Int
-putIntegral :: IDXContentType -> Int -> Put
-putIntegral IDXUnsignedByte n = put $! (fromIntegral n :: Word8)
-putIntegral IDXSignedByte   n = put $! (fromIntegral n :: Int8 )
-putIntegral IDXShort        n = put $! (fromIntegral n :: Int16)
-putIntegral IDXInt          n = put $! (fromIntegral n :: Int32)
-putIntegral t               _ = error $ "IDX.putIntegral " ++ show t 
-
--- | Put real values that are saved as Double
-putReal :: IDXContentType -> Double -> Put
-putReal IDXDouble n = put n
-putReal IDXFloat  n = put $! (realToFrac n :: Float )
+    readEntries n = V.replicateM n $ getContent >>= (return $!)
 
 -- | Split data by the first dimension of the C-Array. This would e.g. split a
 -- data-set of images into a list of data representing an individual image
