@@ -79,6 +79,7 @@ test-suite tests
                      , vector >= 0.10 && < 0.13
                      , binary >= 0.7 && < 0.9
                      , directory >= 1.2 && < 1.4
+                     , QuickCheck>= 2.12 && < 3
                      , mnist-idx
 
   default-language:    Haskell2010

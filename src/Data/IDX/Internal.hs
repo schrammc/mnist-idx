@@ -33,7 +33,7 @@ data IDXContentType where
    IDXInt          :: IDXContentType
    IDXFloat        :: IDXContentType
    IDXDouble       :: IDXContentType
-   deriving Show
+   deriving (Show, Eq)
 
 instance Binary IDXContentType where
     get = do
@@ -59,7 +59,7 @@ instance Binary IDXContentType where
 -- is used, the data is serialized according to the 'IDXContentType'.
 data IDXData = IDXInts    IDXContentType (V.Vector Int) (V.Vector Int   )
              | IDXDoubles IDXContentType (V.Vector Int) (V.Vector Double)
-             deriving Show
+             deriving (Show, Eq)
 
 
 instance Binary IDXData where

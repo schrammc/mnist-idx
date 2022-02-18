@@ -1,14 +1,18 @@
+{-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
-import           Test.Hspec
 
 import           Data.IDX
 import           Data.IDX.Internal
 
+import           Control.Monad
 import qualified Data.Vector.Unboxed as V
+import           System.Directory
+import           System.IO
+import           Test.Hspec
+import           Test.QuickCheck
+import qualified Data.Binary as Binary
 
-import System.Directory
-import System.IO
 
 dataList :: [Int]
 dataList = [1,2,3,4]
@@ -22,9 +26,29 @@ testData = IDXInts IDXUnsignedByte dims values
 testLabels :: IDXLabels
 testLabels = IDXLabels $ V.fromList [0,1]
 
+instance Arbitrary IDXContentType where
+  arbitrary = elements [IDXInt, IDXDouble]
+
+instance Arbitrary IDXData where
+  arbitrary = do
+    typ <- arbitrary :: Gen IDXContentType
+    numberOfDimensions <- choose (1, 5) :: Gen Int
+    dimensionSizes <- V.fromList <$> replicateM numberOfDimensions (choose (1, 10))
+    case typ of
+      IDXInt ->
+        IDXInts typ dimensionSizes . V.fromList
+          <$> replicateM (product $ V.toList dimensionSizes) arbitrary
+      IDXDouble ->
+        IDXDoubles typ dimensionSizes . V.fromList
+          <$> replicateM (product $ V.toList dimensionSizes) arbitrary
+      _ -> error "This shouldn't happen"
+
 spec :: Spec
 spec = do
   describe "IDX dataset" $ do
+    it "Binary serialization roundtrips" $
+      property $ \(idxData :: IDXData) -> Binary.decode (Binary.encode idxData) == idxData
+
     it "should be created and deserialized correctly" $ do
 
       -- Get temporary directory
