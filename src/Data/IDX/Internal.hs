@@ -21,11 +21,12 @@ module Data.IDX.Internal where
 import           Control.Monad (replicateM, void)
 import           Data.Binary
 import           Data.Int
+import Test.QuickCheck (Arbitrary)
 
 import qualified Data.Vector.Unboxed as V
 
 data SomeIDXContentType where
-  SomeIDXContentType :: IDXContentType a -> SomeIDXContentType
+  SomeIDXContentType :: (Binary a, V.Unbox a, Show a, Arbitrary a) => IDXContentType a -> SomeIDXContentType
 
 deriving instance Show SomeIDXContentType
 
@@ -75,7 +76,8 @@ instance Binary SomeIDXContentType where
 -- as 'Int' or 'Double' unboxed vectors. However when binary serialization
 -- is used, the data is serialized according to the 'IDXContentType'.
 data IDXData where
-  IDXData :: (Binary a, V.Unbox a, Show a) => IDXContentType a -> V.Vector Int -> V.Vector a -> IDXData
+  IDXData :: (Binary a, V.Unbox a, Show a, Arbitrary a) =>
+             IDXContentType a -> V.Vector Int -> V.Vector a -> IDXData
 
 deriving instance Show IDXData
 
@@ -215,7 +217,7 @@ readContent readEntries chunkSize n =
 
 -- | Helper function for parsing integer data from the
 -- IDX content. Returns a full IDX result.
-buildResult :: (Binary a, V.Unbox a, Show a)
+buildResult :: (Binary a, V.Unbox a, Show a, Arbitrary a)
             => Int              -- ^ Expected number of entries
             -> IDXContentType a -- ^ Description of content
             -> V.Vector Int     -- ^ Dimension sizes

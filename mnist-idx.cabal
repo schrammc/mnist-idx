@@ -59,7 +59,8 @@ library
   build-depends:       base >=4.6 && <5,
                        binary >= 0.7 && < 0.9,
                        vector >= 0.10 && < 0.13,
-                       bytestring >= 0.10 && < 0.12
+                       bytestring >= 0.10 && < 0.12,
+                       QuickCheck>= 2.12 && < 3
   -- Directories containing source files.
   hs-source-dirs:      src
   
