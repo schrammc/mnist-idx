@@ -1,0 +1,26 @@
+on: push
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+
+      - uses: actions/checkout@v2
+
+      - name: Cache ~/.stack
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-haskell-homedir
+        with:
+            path: ~/.stack
+            key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/stack.yaml') }}
+            restore-keys: |
+              ${{ runner.os }}-build-${{ env.cache-name }}-
+              ${{ runner.os }}-build-
+              ${{ runner.os }}-
+
+      - name: "Print versions"
+        run: "stack --version"
+
+      - name: "Test"
+        run: "stack test"
+
