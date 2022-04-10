@@ -20,6 +20,11 @@ module Data.IDX.Internal where
 import           Control.Monad (replicateM)
 import           Data.Binary
 import           Data.Int
+import           GHC.Float ( castFloatToWord32
+                           , castDoubleToWord64
+                           , castWord64ToDouble
+                           , castWord32ToFloat
+                           )
 
 import qualified Data.Vector.Unboxed as V
 import           Data.Vector.Unboxed ((!))
@@ -191,10 +196,10 @@ getInt32 :: Get Int32
 getInt32 = get
 
 getFloat :: Get Float
-getFloat = get
+getFloat = castWord32ToFloat <$> get
 
 getDouble :: Get Double
-getDouble = get
+getDouble = castWord64ToDouble <$> get
 
 -- | Helper function for parsing integer data from the
 -- IDX content. Returns a full IDX result.
@@ -234,8 +239,8 @@ putIntegral t               _ = error $ "IDX.putIntegral " ++ show t
 
 -- | Put real values that are saved as Double
 putReal :: IDXContentType -> Double -> Put
-putReal IDXDouble n = put n
-putReal IDXFloat  n = put $! (realToFrac n :: Float )
+putReal IDXDouble n = put $ castDoubleToWord64 n
+putReal IDXFloat  n = put $! castFloatToWord32 (realToFrac n :: Float )
 
 -- | Split data by the first dimension of the C-Array. This would e.g. split a
 -- data-set of images into a list of data representing an individual image
